@@ -227,6 +227,28 @@ The Individual fields must be an array of objects. Each object must follow the f
 | display_zero_state     | `boolean` | `true`                                         | If set to `true`, the state will be shown even if it is `0`. If set to `false`, the state will be hidden if it is `0`.                                                               |
 | color_value            | `boolean` | `false`                                        | If set to `true`, state text color will match the circle's color. If set to `false`, state text color will be the primary text color.                                                |
 | decimals               | `number`  | `0`                                            | Number of decimals to show in the corresponding state.                                                                                                                               |
+| bidirectional          | `boolean` | `false`                                        | Treat this device as a bidirectional power **source** (e.g. a V2G-capable EV). See [Bidirectional Devices (V2G)](#bidirectional-devices-v2g).                                          |
+| invert_bidirectional   | `boolean` | `false`                                        | Only used with `bidirectional`. Flip the sign convention if your sensor reports a positive value while exporting.                                                                     |
+
+#### Bidirectional Devices (V2G)
+
+By default an individual device is always treated as a **load** (it consumes power from the home). For a device that can also *return* power — such as a V2G-capable EV or a bidirectional DC charger — set `bidirectional: true`.
+
+The sign convention mirrors the battery:
+
+- **positive** value → the device is **consuming** (charging) and is shown as a normal load.
+- **negative** value → the device is **producing** (V2G / discharging). It becomes a power source: it feeds the home, the home-usage ring shows a segment in the device's colour, and any surplus that the grid is exporting is drawn as a flow from the home busbar to the grid in the device's colour. This stops the card from mis-attributing the incoming power to the battery.
+
+If your sensor uses the opposite sign (positive while exporting), add `invert_bidirectional: true`.
+
+```yaml
+individual:
+  - entity: sensor.ev_charger_output_power # +ve while charging, -ve during V2G
+    name: EV
+    icon: mdi:ev-station
+    color: "#29b6f6"
+    bidirectional: true
+```
 
 #### Home Configuration
 

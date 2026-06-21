@@ -8,6 +8,7 @@ import { flowSolarToBattery } from "./solart-to-battery";
 import { flowGridToHome } from "./grid-to-home";
 import { flowBatteryToHome } from "./battery-to-home";
 import { flowBatteryToGrid } from "./battery-to-grid";
+import { flowEVToGrid } from "./ev-to-grid";
 
 export interface Flows {
   battery: any;
@@ -15,9 +16,10 @@ export interface Flows {
   individual: IndividualObject[];
   solar: any;
   newDur: NewDur;
+  evHomeColor?: string;
 }
 
-export const flowElement = (config: PowerFlowCardPlusConfig, { battery, grid, individual, solar, newDur }: Flows) => {
+export const flowElement = (config: PowerFlowCardPlusConfig, { battery, grid, individual, solar, newDur, evHomeColor }: Flows) => {
   return html`
   ${flowSolarToHome(config, { battery, grid, individual, solar, newDur })}
   ${flowSolarToGrid(config, { battery, grid, individual, solar, newDur })}
@@ -25,5 +27,6 @@ export const flowElement = (config: PowerFlowCardPlusConfig, { battery, grid, in
   ${flowGridToHome(config, { battery, grid, individual, solar, newDur })}
   ${flowBatteryToHome(config, { battery, grid, individual, newDur })}
   ${flowBatteryToGrid(config, { battery, grid, individual, newDur })}
+  ${flowEVToGrid(config, { battery, grid, individual, solar, newDur, evHomeColor })}
 </div>`;
 };

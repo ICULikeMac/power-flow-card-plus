@@ -17,6 +17,8 @@ interface Home {
   homeBatteryCircumference: number;
   homeNonFossilCircumference: number;
   homeGridCircumference: number;
+  homeEVCircumference: number;
+  evHomeColor: string;
   individual: IndividualObject[];
 }
 
@@ -33,6 +35,8 @@ export const homeElement = (
     homeBatteryCircumference,
     homeNonFossilCircumference,
     homeGridCircumference,
+    homeEVCircumference,
+    evHomeColor,
     individual,
   }: Home
 ) => {
@@ -104,6 +108,22 @@ export const homeElement = (
                   stroke-dasharray="${homeNonFossilCircumference} ${circleCircumference - homeNonFossilCircumference}"
                   stroke-dashoffset="-${circleCircumference -
                   homeNonFossilCircumference -
+                  (homeBatteryCircumference || 0) -
+                  (homeSolarCircumference || 0)}"
+                  shape-rendering="geometricPrecision"
+                />`
+            : nothing}
+          ${homeEVCircumference
+            ? svg`<circle
+                  class="ev-source"
+                  cx="40"
+                  cy="40"
+                  r="38"
+                  stroke="${evHomeColor}"
+                  stroke-dasharray="${homeEVCircumference} ${circleCircumference - homeEVCircumference}"
+                  stroke-dashoffset="-${circleCircumference -
+                  homeEVCircumference -
+                  (homeNonFossilCircumference || 0) -
                   (homeBatteryCircumference || 0) -
                   (homeSolarCircumference || 0)}"
                   shape-rendering="geometricPrecision"

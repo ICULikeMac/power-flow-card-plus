@@ -61,6 +61,19 @@ export type IndividualDeviceType = BaseConfigEntity & {
   use_metadata?: boolean;
   decimals?: number;
   show_direction?: boolean;
+  /**
+   * Treat this device as a bidirectional power source (e.g. a V2G-capable EV).
+   * When enabled, a negative reading means the device is *exporting* power into
+   * the system: it feeds the home (and exports the surplus to the grid) instead
+   * of being shown purely as a load. Like the battery, the sign convention is
+   * positive = consumption (charging), negative = production (discharging / V2G).
+   */
+  bidirectional?: boolean;
+  /**
+   * Flip the sign convention for a bidirectional device, in case the underlying
+   * sensor reports positive while exporting.
+   */
+  invert_bidirectional?: boolean;
 };
 
 export type EntityType = "battery" | "grid" | "solar" | "individual1" | "individual2" | "home" | "fossil_fuel_percentage";
@@ -101,6 +114,7 @@ export type NewDur = {
   solarToHome: number;
   individual: number[];
   nonFossil: number;
+  evToGrid: number;
 };
 
 export type GridObject = {

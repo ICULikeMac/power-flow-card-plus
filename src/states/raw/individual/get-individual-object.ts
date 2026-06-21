@@ -1,7 +1,7 @@
 import { ActionConfig, HomeAssistant } from "custom-card-helpers";
 import { IndividualDeviceType } from "@/type";
 import { computeFieldIcon, computeFieldName } from "@/utils/compute-field-attributes";
-import { getIndividualSecondaryState, getIndividualState } from ".";
+import { getIndividualSecondaryState, getIndividualState, getIndividualStateRaw } from ".";
 import { hasIndividualObject } from "./has-individual-object";
 import { convertColorListToHex } from "@/utils/convert-color";
 
@@ -19,6 +19,10 @@ const fallbackIndividualObject: IndividualObject = {
   unit_white_space: false,
   invertAnimation: false,
   showDirection: false,
+  isBidirectional: false,
+  stateRaw: null,
+  toHome: 0,
+  toGrid: 0,
   secondary: {
     entity: null,
     template: null,
@@ -49,6 +53,14 @@ export type IndividualObject = {
   decimals?: number;
   invertAnimation: boolean;
   showDirection: boolean;
+  /** True when configured as a bidirectional source (e.g. V2G EV). */
+  isBidirectional: boolean;
+  /** Signed power in watts: positive = consumption, negative = production (V2G). */
+  stateRaw: number | null;
+  /** Power (W) this device feeds into the home. Only set for bidirectional devices that are exporting. */
+  toHome: number;
+  /** Power (W) this device exports to the grid. Only set for bidirectional devices that are exporting. */
+  toGrid: number;
   secondary: {
     entity: string | null;
     template: string | null;
@@ -71,10 +83,15 @@ export const getIndividualObject = (hass: HomeAssistant, field: IndividualDevice
   if (!field || !field?.entity) return fallbackIndividualObject;
   const entity = field.entity;
   const state = getIndividualState(hass, field);
+  const stateRaw = getIndividualStateRaw(hass, field);
+  const isBidirectional = field?.bidirectional || false;
   const displayZero = field?.display_zero || false;
   const displayZeroTolerance = field?.display_zero_tolerance || 0;
   const has = hasIndividualObject(displayZero, state, displayZeroTolerance);
-  const isStateNegative = state && state < 0;
+  // For a bidirectional device, a negative (signed) reading means the device is
+  // exporting power. We flip the animation/arrow so the flow points *toward* the
+  // home instead of toward the device.
+  const isStateNegative = isBidirectional && stateRaw !== null && stateRaw < 0;
   const userConfiguredInvertAnimation = field?.inverted_animation || false;
   const invertAnimation = isStateNegative ? !userConfiguredInvertAnimation : userConfiguredInvertAnimation;
 
@@ -100,6 +117,10 @@ export const getIndividualObject = (hass: HomeAssistant, field: IndividualDevice
     decimals: field?.decimals,
     invertAnimation,
     showDirection: field?.show_direction || false,
+    isBidirectional,
+    stateRaw,
+    toHome: 0,
+    toGrid: 0,
     secondary: {
       entity: field?.secondary_info?.entity || null,
       template: field?.secondary_info?.template || null,

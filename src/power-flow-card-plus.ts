@@ -32,6 +32,7 @@ import { ActionConfigSet, GridObject, HomeSources, NewDur, TemplatesObj } from "
 import { computeFieldIcon, computeFieldName } from "@/utils/compute-field-attributes";
 import { computeFlowRate } from "@/utils/compute-flow-rate";
 import { computePowerDistributionAfterSolarAndBattery } from "@/utils/compute-power-distribution";
+import { computeV2GDistribution } from "@/utils/compute-v2g-distribution";
 import {
   checkHasBottomIndividual,
   checkHasRightIndividual,
@@ -93,6 +94,8 @@ export class PowerFlowCardPlus extends LitElement {
         homeSolarCircumference: number;
         homeNonFossilCircumference: number;
         homeGridCircumference: number;
+        homeEVCircumference: number;
+        evHomeColor: string;
         homeUsageToDisplay: string;
         sortedIndividualObjects: IndividualObject[];
         individualFieldLeftTop?: IndividualObject;
@@ -290,6 +293,8 @@ export class PowerFlowCardPlus extends LitElement {
       homeGridCircumference,
       homeNonFossilCircumference,
       homeSolarCircumference,
+      homeEVCircumference,
+      evHomeColor,
       homeUsageToDisplay,
       individualFieldLeftTop,
       individualFieldLeftBottom,
@@ -375,6 +380,8 @@ export class PowerFlowCardPlus extends LitElement {
                   homeGridCircumference,
                   homeNonFossilCircumference,
                   homeSolarCircumference,
+                  homeEVCircumference,
+                  evHomeColor,
                   newDur,
                   templatesObj,
                   homeUsageToDisplay,
@@ -411,6 +418,7 @@ export class PowerFlowCardPlus extends LitElement {
             individual: individualObjs,
             newDur,
             solar,
+            evHomeColor,
           })}
         </div>
         ${dashboardLinkElement(this._config, this.hass)}
@@ -667,14 +675,33 @@ export class PowerFlowCardPlus extends LitElement {
       getEntityStateWatts: (entityId) => getEntityStateWatts(this.hass, entityId),
       getEntityState: (entityId) => getEntityState(this.hass, entityId),
     });
-    const totalIndividualConsumption = individualObjs?.reduce((a, b) => a + (b.has ? b.state || 0 : 0), 0) || 0;
-    const totalHomeConsumption = Math.max((grid.state.toHome ?? 0) + (solar.state.toHome ?? 0) + (battery.state.toHome ?? 0), 0);
+    // Treat any bidirectional individual device (e.g. a V2G EV) that is exporting as a
+    // power source: it feeds the home and exports its surplus to the grid.
+    const v2g = computeV2GDistribution({ individualObjs, grid, solar, battery });
+    // Exporting bidirectional devices are producers, not loads, so they must not be
+    // subtracted from the home consumption.
+    const totalIndividualConsumption =
+      individualObjs?.reduce((a, b) => a + (b.has && !(b.isBidirectional && (b.stateRaw ?? 0) < 0) ? b.state || 0 : 0), 0) || 0;
+    const totalHomeConsumption = Math.max(
+      (grid.state.toHome ?? 0) + (solar.state.toHome ?? 0) + (battery.state.toHome ?? 0) + v2g.evToHomeTotal,
+      0
+    );
     const homeBatteryCircumference = battery.state.toHome ? circleCircumference * (battery.state.toHome / totalHomeConsumption) : 0;
     const homeSolarCircumference = solar.state.toHome ? circleCircumference * (solar.state.toHome / totalHomeConsumption) : 0;
     const homeNonFossilCircumference = nonFossil.state.power ? circleCircumference * (nonFossil.state.power / totalHomeConsumption) : 0;
+    const homeEVCircumference = v2g.evToHomeTotal ? circleCircumference * (v2g.evToHomeTotal / totalHomeConsumption) : 0;
     const homeGridCircumference =
       circleCircumference *
-      ((totalHomeConsumption - (nonFossil.state.power ?? 0) - (battery.state.toHome ?? 0) - (solar.state.toHome ?? 0)) / totalHomeConsumption);
+      ((totalHomeConsumption -
+        (nonFossil.state.power ?? 0) -
+        (battery.state.toHome ?? 0) -
+        (solar.state.toHome ?? 0) -
+        v2g.evToHomeTotal) /
+        totalHomeConsumption);
+    // Colour of the EV segment in the home ring: the colour of the first exporting
+    // bidirectional device, falling back to a neutral variable.
+    const evHomeColor =
+      individualObjs?.find((i) => i.isBidirectional && (i.stateRaw ?? 0) < 0 && i.color)?.color || "var(--energy-grid-return-color)";
     const homeUsageToDisplay =
       entities.home?.override_state && entities.home.entity
         ? entities.home?.subtract_individual
@@ -733,6 +760,7 @@ export class PowerFlowCardPlus extends LitElement {
       solarToHome: computeFlowRate(this._config, solar.state.toHome ?? 0, totalLines),
       individual: individualObjs?.map((individual) => computeFlowRate(this._config, individual.state ?? 0, totalIndividualConsumption)) || [],
       nonFossil: computeFlowRate(this._config, nonFossil.state.power ?? 0, totalLines),
+      evToGrid: computeFlowRate(this._config, v2g.evToGridTotal, totalLines),
     };
     if (checkShouldShowDots(this._config)) {
       ["batteryGrid", "batteryToHome", "gridToHome", "solarToBattery", "solarToGrid", "solarToHome"].forEach((flowName) => {
@@ -814,6 +842,8 @@ export class PowerFlowCardPlus extends LitElement {
       homeSolarCircumference,
       homeNonFossilCircumference,
       homeGridCircumference,
+      homeEVCircumference,
+      evHomeColor,
       homeUsageToDisplay,
       sortedIndividualObjects: visibleIndividualObjects,
       individualFieldLeftTop,
