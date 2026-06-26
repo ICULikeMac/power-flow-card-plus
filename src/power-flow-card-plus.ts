@@ -761,6 +761,7 @@ export class PowerFlowCardPlus extends LitElement {
       individual: individualObjs?.map((individual) => computeFlowRate(this._config, individual.state ?? 0, totalIndividualConsumption)) || [],
       nonFossil: computeFlowRate(this._config, nonFossil.state.power ?? 0, totalLines),
       evToGrid: computeFlowRate(this._config, v2g.evToGridTotal, totalLines),
+      evToBattery: computeFlowRate(this._config, v2g.evToBatteryTotal, totalLines),
     };
     if (checkShouldShowDots(this._config)) {
       ["batteryGrid", "batteryToHome", "gridToHome", "solarToBattery", "solarToGrid", "solarToHome"].forEach((flowName) => {

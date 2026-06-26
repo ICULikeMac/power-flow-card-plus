@@ -115,6 +115,7 @@ export type NewDur = {
   individual: number[];
   nonFossil: number;
   evToGrid: number;
+  evToBattery: number;
 };
 
 export type GridObject = {

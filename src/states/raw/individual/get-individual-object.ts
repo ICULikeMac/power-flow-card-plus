@@ -23,6 +23,7 @@ const fallbackIndividualObject: IndividualObject = {
   stateRaw: null,
   toHome: 0,
   toGrid: 0,
+  toBattery: 0,
   secondary: {
     entity: null,
     template: null,
@@ -61,6 +62,8 @@ export type IndividualObject = {
   toHome: number;
   /** Power (W) this device exports to the grid. Only set for bidirectional devices that are exporting. */
   toGrid: number;
+  /** Power (W) this device uses to charge the house battery. Only set for bidirectional devices that are exporting. */
+  toBattery: number;
   secondary: {
     entity: string | null;
     template: string | null;
@@ -121,6 +124,7 @@ export const getIndividualObject = (hass: HomeAssistant, field: IndividualDevice
     stateRaw,
     toHome: 0,
     toGrid: 0,
+    toBattery: 0,
     secondary: {
       entity: field?.secondary_info?.entity || null,
       template: field?.secondary_info?.template || null,

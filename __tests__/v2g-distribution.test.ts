@@ -21,6 +21,7 @@ const makeIndividual = (overrides: Partial<IndividualObject>): IndividualObject 
     stateRaw: null,
     toHome: 0,
     toGrid: 0,
+    toBattery: 0,
     secondary: {} as IndividualObject["secondary"],
     ...overrides,
   }) as IndividualObject;
@@ -31,28 +32,63 @@ describe("computeV2GDistribution", () => {
     const ev = makeIndividual({ isBidirectional: true, state: 9440, stateRaw: -9440 });
     const result = computeV2GDistribution({
       individualObjs: [ev],
-      grid: { state: { toGrid: 7894 } },
-      solar: { state: { toGrid: 0 } },
-      battery: { state: { toGrid: 0 } },
+      grid: { state: { toGrid: 7894, toBattery: 0 } },
+      solar: { state: { toGrid: 0, toBattery: 0 } },
+      battery: { state: { toGrid: 0, toBattery: 0 } },
     });
 
     expect(ev.toGrid).toBe(7894);
     expect(ev.toHome).toBe(9440 - 7894);
+    expect(ev.toBattery).toBe(0);
     expect(result.evToGridTotal).toBe(7894);
     expect(result.evToHomeTotal).toBe(1546);
+    expect(result.evToBatteryTotal).toBe(0);
+  });
+
+  it("charges the house battery from the car, then feeds the home (V2G + battery charging)", () => {
+    // Car exporting 8000 W, battery charging 3600 W with no solar/grid to supply it,
+    // grid balanced -> 3600 W charges the battery, the rest (4400 W) powers the home.
+    const ev = makeIndividual({ isBidirectional: true, state: 8000, stateRaw: -8000 });
+    const result = computeV2GDistribution({
+      individualObjs: [ev],
+      grid: { state: { toGrid: 0, toBattery: 0 } },
+      solar: { state: { toGrid: 0, toBattery: 0 } },
+      battery: { state: { toGrid: 0, toBattery: 3600 } },
+    });
+
+    expect(ev.toBattery).toBe(3600);
+    expect(ev.toHome).toBe(4400);
+    expect(ev.toGrid).toBe(0);
+    expect(result.evToBatteryTotal).toBe(3600);
+    expect(result.evToHomeTotal).toBe(4400);
+  });
+
+  it("does not credit battery charge already supplied by solar or the grid", () => {
+    // Battery charging 5000 W but 5000 W comes from solar+grid -> EV must not charge it.
+    const ev = makeIndividual({ isBidirectional: true, state: 2000, stateRaw: -2000 });
+    computeV2GDistribution({
+      individualObjs: [ev],
+      grid: { state: { toGrid: 0, toBattery: 2000 } },
+      solar: { state: { toGrid: 0, toBattery: 3000 } },
+      battery: { state: { toGrid: 0, toBattery: 5000 } },
+    });
+
+    expect(ev.toBattery).toBe(0);
+    expect(ev.toHome).toBe(2000);
   });
 
   it("treats a charging (positive) bidirectional device as a pure load", () => {
     const ev = makeIndividual({ isBidirectional: true, state: 8800, stateRaw: 8800 });
     const result = computeV2GDistribution({
       individualObjs: [ev],
-      grid: { state: { toGrid: 0 } },
-      solar: { state: { toGrid: 0 } },
-      battery: { state: { toGrid: 0 } },
+      grid: { state: { toGrid: 0, toBattery: 0 } },
+      solar: { state: { toGrid: 0, toBattery: 0 } },
+      battery: { state: { toGrid: 0, toBattery: 0 } },
     });
 
     expect(ev.toHome).toBe(0);
     expect(ev.toGrid).toBe(0);
+    expect(ev.toBattery).toBe(0);
     expect(result.evToHomeTotal).toBe(0);
     expect(result.evToGridTotal).toBe(0);
   });
@@ -62,9 +98,9 @@ describe("computeV2GDistribution", () => {
     const ev = makeIndividual({ isBidirectional: true, state: 2000, stateRaw: -2000 });
     computeV2GDistribution({
       individualObjs: [ev],
-      grid: { state: { toGrid: 5000 } },
-      solar: { state: { toGrid: 5000 } },
-      battery: { state: { toGrid: 0 } },
+      grid: { state: { toGrid: 5000, toBattery: 0 } },
+      solar: { state: { toGrid: 5000, toBattery: 0 } },
+      battery: { state: { toGrid: 0, toBattery: 0 } },
     });
 
     expect(ev.toGrid).toBe(0);
@@ -75,13 +111,14 @@ describe("computeV2GDistribution", () => {
     const load = makeIndividual({ isBidirectional: false, state: 1000, stateRaw: 1000 });
     const result = computeV2GDistribution({
       individualObjs: [load],
-      grid: { state: { toGrid: 3000 } },
-      solar: { state: { toGrid: 0 } },
-      battery: { state: { toGrid: 0 } },
+      grid: { state: { toGrid: 3000, toBattery: 0 } },
+      solar: { state: { toGrid: 0, toBattery: 0 } },
+      battery: { state: { toGrid: 0, toBattery: 0 } },
     });
 
     expect(load.toHome).toBe(0);
     expect(load.toGrid).toBe(0);
+    expect(load.toBattery).toBe(0);
     expect(result.evToHomeTotal).toBe(0);
   });
 });

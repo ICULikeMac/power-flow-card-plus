@@ -9,6 +9,7 @@ import { flowGridToHome } from "./grid-to-home";
 import { flowBatteryToHome } from "./battery-to-home";
 import { flowBatteryToGrid } from "./battery-to-grid";
 import { flowEVToGrid } from "./ev-to-grid";
+import { flowEVToBattery } from "./ev-to-battery";
 
 export interface Flows {
   battery: any;
@@ -28,5 +29,6 @@ export const flowElement = (config: PowerFlowCardPlusConfig, { battery, grid, in
   ${flowBatteryToHome(config, { battery, grid, individual, newDur })}
   ${flowBatteryToGrid(config, { battery, grid, individual, newDur })}
   ${flowEVToGrid(config, { battery, grid, individual, solar, newDur, evHomeColor })}
+  ${flowEVToBattery(config, { battery, grid, individual, solar, newDur, evHomeColor })}
 </div>`;
 };

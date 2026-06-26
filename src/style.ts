@@ -457,6 +457,17 @@ export const styles = css`
     stroke-width: 4;
     fill: var(--energy-grid-return-color);
   }
+  path.ev-grid,
+  circle.ev-grid,
+  path.ev-battery,
+  circle.ev-battery {
+    stroke: var(--energy-grid-return-color);
+  }
+  circle.ev-grid,
+  circle.ev-battery {
+    stroke-width: 4;
+    fill: var(--energy-grid-return-color);
+  }
   .return {
     color: var(--energy-grid-return-color);
   }
